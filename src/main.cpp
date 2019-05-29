@@ -22,7 +22,8 @@ void start();
 
 BluetoothSerial SerialBT;
 Stream* serial = nullptr;
-
+int stav_0;
+int stav_1;
 
 
 void setup() {
@@ -51,6 +52,9 @@ void setup() {
     pinMode(26, INPUT_PULLUP);
     pinMode(27, INPUT_PULLUP);
     pinMode(33, INPUT_PULLUP);
+    rbc().initSmartServoBus(2,UART_NUM_2, GPIO_NUM_14);
+    rbc().servoBus().limit(0, 29_deg, 130_deg); // stav 0 = 25/130
+    rbc().servoBus().limit(1, 80_deg, 180_deg); // stav 0 = 25/130
     // rbc().schedule(200, vypis_IR);  // spusti casovac kazdych 200ms presne pomoci preruseni (ostatni veci pockaji)
     Serial.println ("Calibration begin after pushing SW2\n");
     SerialBT.println ("Calibration begin after pushing SW2\n");
@@ -74,7 +78,7 @@ void setup() {
     Serial.print('\t');
     Serial.println(rbc().motor(RIGHT_MOTOR)->encoder()->value());
     
-    start();
+    //start();
 }
     
 timeout send_data { msec(500) }; // timeout zajistuje posilani dat do PC kazdych 500 ms
@@ -117,25 +121,49 @@ void loop()
                 Serial.println(power_motor);
                 break;
             case 'w':
-                rbc().setMotors().power(LEFT_MOTOR, power_motor)
-                                 .power(RIGHT_MOTOR, power_motor)
-                                 .set();
+                // rbc().setMotors().power(LEFT_MOTOR, power_motor)
+                //                  .power(RIGHT_MOTOR, power_motor)
+                //                  .set();
+                stav_0++;
+                Serial.print("stav_0  ");
+                Serial.println(stav_0);
+                rbc().servoBus().set(0,stav_0,180.f,1.5f); // stav 0 = 25/130
+                rbc().servoBus().set(1,stav_1,180.f,1.5f); // stav 1 = 180/80
                 break;
             case 's':
-                rbc().setMotors().power(LEFT_MOTOR, -power_motor)
-                                 .power(RIGHT_MOTOR, -power_motor)
-                                 .set();
+                // rbc().setMotors().power(LEFT_MOTOR, -power_motor)
+                //                  .power(RIGHT_MOTOR, -power_motor)
+                //                  .set();
+                stav_0--;
+                Serial.print("stav_0  ");
+                Serial.println(stav_0);
+                rbc().servoBus().set(0,stav_0,180.f,1.5f); // stav 0 = 25/130
+                rbc().servoBus().set(1,stav_1,180.f,1.5f); // stav 1 = 180/80
                 break;
             case 'a':
-                rbc().setMotors().power(LEFT_MOTOR, -power_motor)
-                                 .power(RIGHT_MOTOR, power_motor)
-                                 .set();
+                // rbc().setMotors().power(LEFT_MOTOR, -power_motor)
+                //                  .power(RIGHT_MOTOR, power_motor)
+                //                  .set();
+                stav_1++;
+                Serial.print("stav_1  ");
+                Serial.println(stav_1);
+                rbc().servoBus().set(0,stav_0,180.f,1.5f); // stav 0 = 25/130
+                rbc().servoBus().set(1,stav_1,180.f,1.5f); // stav 1 = 180/80
                 break;
             case 'd':
-                rbc().setMotors().power(LEFT_MOTOR, power_motor)
-                                 .power(RIGHT_MOTOR, -power_motor)
-                                 .set();
+                // rbc().setMotors().power(LEFT_MOTOR, power_motor)
+                //                  .power(RIGHT_MOTOR, -power_motor)
+                //                  .set();
+                stav_1--;
+                Serial.print("stav_1  ");
+                Serial.println(stav_1);
+                rbc().servoBus().set(0,stav_0,180.f,1.5f); // stav 0 = 25/130
+                rbc().servoBus().set(1,stav_1,180.f,1.5f); // stav 1 = 180/80
                 break;
+            case 'r':
+                rbc().setMotors().power(LEFT_MOTOR, 40)
+                                  .power(RIGHT_MOTOR, -40)
+                                  .set();
             case '*':
                 c = '0' + 10;
             case '0' ... '9':
