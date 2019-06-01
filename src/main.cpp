@@ -14,6 +14,10 @@
 #include "function.h"
 bool kalibrace(); // definice dole pod hlavnim programem
 void start();
+void svicik();
+void bateri_unloading(int bateri_number);
+void ultrasounic_pinmode();
+float read_ultrasounic();
 
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
@@ -26,10 +30,11 @@ int stav_0;
 int stav_1;
 
 
-void setup() {
+void setup() 
+{
     Serial.begin (1000000); 
     Serial1.begin(1000000, SERIAL_8N1, 16, 17, false, 2000000UL ); // trida HardwareSerial (speed, config, Rx, Tx, invert, timeout )
-    if (!SerialBT.begin("RBControl")) //Bluetooth device name
+    if (!SerialBT.begin("K2_robot")) //Bluetooth device name
     {
         Serial.println("!!! Bluetooth initialization failed!");
         serial = &Serial;
@@ -41,7 +46,7 @@ void setup() {
         Serial.println("!!! Bluetooth work!");
     }
     Serial.print ("Starting...\n");
-    rbc();
+    rbc().install(rb::ManagerInstallFlags::MAN_DISABLE_MOTOR_FAILSAFE | rb::ManagerInstallFlags::MAN_DISABLE_BATTERY_MANAGEMENT);
     Serial.print ("RBC initialized\n");
     auto& batt = rbc().battery();
     batt.setCoef(100.0);  // toto musí být napevno, aby si cip nemyslel, ze je nizke napeti na baterce, toto napeti se musi kontrolovat rucne  
@@ -52,9 +57,14 @@ void setup() {
     pinMode(26, INPUT_PULLUP);
     pinMode(27, INPUT_PULLUP);
     pinMode(33, INPUT_PULLUP);
-    rbc().initSmartServoBus(2,UART_NUM_2, GPIO_NUM_14);
-    rbc().servoBus().limit(0, 29_deg, 130_deg); // stav 0 = 25/130
-    rbc().servoBus().limit(1, 80_deg, 180_deg); // stav 0 = 25/130
+    
+    pinMode(GPIO_NUM_36, INPUT);
+    pinMode(GPIO_NUM_39, INPUT);
+
+    ultrasounic_pinmode();
+    rbc().initSmartServoBus(2,UART_NUM_2, GPIO_NUM_4);
+    rbc().servoBus().limit(0, rb::Angle::deg(29), rb::Angle::deg(130)); // stav 0 = 25/130
+    rbc().servoBus().limit(1, rb::Angle::deg(80), rb::Angle::deg(180)); // stav 0 = 25/130
     // rbc().schedule(200, vypis_IR);  // spusti casovac kazdych 200ms presne pomoci preruseni (ostatni veci pockaji)
     Serial.println ("Calibration begin after pushing SW2\n");
     SerialBT.println ("Calibration begin after pushing SW2\n");
@@ -96,10 +106,17 @@ void loop()
         // Serial.println(rbc().motor(RIGHT_MOTOR)->encoder()->value());
 
     }
+    svicik();
+}
+// ************************ definice, ktere jinde nefunguji 
 
-    if(Serial.available()) {
+void svicik()
+{
+    if(Serial.available()) 
+    {
         char c = Serial.read();
-        switch(c) {
+        switch(c) 
+        {
             case 't':
                 if (position_servo >= 5)  position_servo = position_servo -5;               
                 servo.write(position_servo);
@@ -127,8 +144,8 @@ void loop()
                 stav_0++;
                 Serial.print("stav_0  ");
                 Serial.println(stav_0);
-                rbc().servoBus().set(0,stav_0,180.f,1.5f); // stav 0 = 25/130
-                rbc().servoBus().set(1,stav_1,180.f,1.5f); // stav 1 = 180/80
+                rbc().servoBus().set(0,rb::Angle::deg(stav_0),180.f,1.5f); // stav 0 = 25/130
+                rbc().servoBus().set(1,rb::Angle::deg(stav_1),180.f,1.5f); // stav 1 = 180/80
                 break;
             case 's':
                 // rbc().setMotors().power(LEFT_MOTOR, -power_motor)
@@ -137,8 +154,8 @@ void loop()
                 stav_0--;
                 Serial.print("stav_0  ");
                 Serial.println(stav_0);
-                rbc().servoBus().set(0,stav_0,180.f,1.5f); // stav 0 = 25/130
-                rbc().servoBus().set(1,stav_1,180.f,1.5f); // stav 1 = 180/80
+                rbc().servoBus().set(0,rb::Angle::deg(stav_0),180.f,1.5f); // stav 0 = 25/130
+                rbc().servoBus().set(1,rb::Angle::deg(stav_1),180.f,1.5f); // stav 1 = 180/80
                 break;
             case 'a':
                 // rbc().setMotors().power(LEFT_MOTOR, -power_motor)
@@ -147,8 +164,8 @@ void loop()
                 stav_1++;
                 Serial.print("stav_1  ");
                 Serial.println(stav_1);
-                rbc().servoBus().set(0,stav_0,180.f,1.5f); // stav 0 = 25/130
-                rbc().servoBus().set(1,stav_1,180.f,1.5f); // stav 1 = 180/80
+                rbc().servoBus().set(0,rb::Angle::deg(stav_0),180.f,1.5f); // stav 0 = 25/130
+                rbc().servoBus().set(1,rb::Angle::deg(stav_1),180.f,1.5f); // stav 1 = 180/80
                 break;
             case 'd':
                 // rbc().setMotors().power(LEFT_MOTOR, power_motor)
@@ -157,8 +174,8 @@ void loop()
                 stav_1--;
                 Serial.print("stav_1  ");
                 Serial.println(stav_1);
-                rbc().servoBus().set(0,stav_0,180.f,1.5f); // stav 0 = 25/130
-                rbc().servoBus().set(1,stav_1,180.f,1.5f); // stav 1 = 180/80
+                rbc().servoBus().set(0,rb::Angle::deg(stav_0),180.f,1.5f); // stav 0 = 25/130
+                rbc().servoBus().set(1,rb::Angle::deg(stav_1),180.f,1.5f); // stav 1 = 180/80
                 break;
             case 'r':
                 rbc().setMotors().power(LEFT_MOTOR, 40)
@@ -189,9 +206,11 @@ void loop()
 
             case 'i': vpred(1);
                 break;
-            case 'k': vpravo(1);
+            case 'k': 
+                bateri_unloading(0);
                 break;
-            case 'm': vpred(-1);
+            case 'm': 
+                bateri_unloading(1);
                 break;
             case 'j': vlevo(1);
                 break;
@@ -204,7 +223,6 @@ void loop()
         } 
     }
 }
-// ************************ definice, ktere jinde nefunguji 
 
 bool kalibrace() 
 {
@@ -225,7 +243,8 @@ bool kalibrace()
     rbc().motor(RIGHT_MOTOR)->drive(2*ctverec, power_motor, end_right);
     uint32_t t = millis();
     uint32_t t_last_meas = micros();
-    while (! (end_L and end_R) ) {
+    while (! (end_L and end_R) ) 
+    {
         test_ok = read_qrd();
         uint32_t tm = micros();
         //Serial.print(rbc().motor(LEFT_MOTOR)->encoder()->value()); // cteni enkoderu
@@ -234,8 +253,10 @@ bool kalibrace()
         //Serial.print('\t');
         Serial.println(tm - t_last_meas);
         t_last_meas = tm;
-        if (test_ok == true) {
-            for(byte a = 0; a<12; a++) {
+        if (test_ok == true) 
+        {
+            for(byte a = 0; a<12; a++) 
+            {
                 if(qrd_extrem[a][0]>qrd[a])  qrd_extrem[a][0]=qrd[a];
                 if(qrd_extrem[a][1]<qrd[a])  qrd_extrem[a][1]=qrd[a];
             }
@@ -277,15 +298,87 @@ void start()
     Serial.println("vlevo");
     vlevo(1.1);
     Serial.println("vpred1");
-    for (int x = 0; x != 4; ++x) {
+    for (int x = 0; x != 4; ++x) 
+    {
         vpred(1);
     }
     Serial.println("vpred2");
     vpred(0.5);
     Serial.println("hotovo");
-
-     
-
     // chybi zastaveni pri konci hry 
+}
 
+void bateri_unloading(int bateri_number)
+{
+    if (bateri_number == 0)
+    {
+        rbc().setMotors().power(RIGHT_MOTOR, 60)
+                         .power(LEFT_MOTOR, 60)
+                         .set();
+        delay(1500);
+        rbc().motor(LEFT_MOTOR )->drive(-otacka*0.5, 60, nullptr);
+        rbc().motor(RIGHT_MOTOR)->drive(-otacka*0.5, 60, nullptr);
+        delay(1000);
+        while (read_ultrasounic()<13)
+        {
+            rbc().motor(LEFT_MOTOR )->drive(-otacka*0.04547, 40, nullptr);
+            rbc().motor(RIGHT_MOTOR)->drive(-otacka*0.04547, 40, nullptr);
+            delay(50);
+        }
+        while(read_ultrasounic()>13.5)
+        {
+            rbc().motor(LEFT_MOTOR )->drive(otacka*0.04547, 40, nullptr);
+            rbc().motor(RIGHT_MOTOR)->drive(otacka*0.04547, 40, nullptr);
+            delay(50);
+        }
+        rbc().servoBus().set(1,rb::Angle::deg(175),180.f,1.5f);
+        delay(1000);
+        rbc().motor(LEFT_MOTOR)->drive(-otacka * 0.5, 50, nullptr);
+        rbc().motor(RIGHT_MOTOR)->drive(-otacka * 0.5, 50, nullptr);
+        rbc().servoBus().set(1,rb::Angle::deg(35),180.f,1.5f);
+        delay(200);
+    }
+    else if (bateri_number == 1)
+    {
+        while (read_ultrasounic()<4.3)
+        {
+            rbc().motor(LEFT_MOTOR )->drive(-otacka*0.04547, 40, nullptr);
+            rbc().motor(RIGHT_MOTOR)->drive(-otacka*0.04547, 40, nullptr);
+            delay(50);
+        }
+        while(read_ultrasounic()>4.5)
+        {
+            rbc().motor(LEFT_MOTOR )->drive(otacka*0.04547, 40, nullptr);
+            rbc().motor(RIGHT_MOTOR)->drive(otacka*0.04547, 40, nullptr);
+            delay(50);
+        }
+        rbc().servoBus().set(1,rb::Angle::deg(140),100.f,15.0f);
+        delay(1000);
+        rbc().servoBus().set(1,rb::Angle::deg(175),100.f,15.0f);
+        rbc().motor(RIGHT_MOTOR)->drive(-otacka * 1.5 , 40, nullptr);
+        rbc().motor(LEFT_MOTOR )->drive(-otacka * 1.5 , 40, nullptr);
+        delay(1200);
+        rbc().servoBus().set(1,rb::Angle::deg(30),180.f,1.5f);
+    }
+}
+
+void ultrasounic_pinmode()
+{
+    pinMode(Echo, INPUT);
+    pinMode(Trig, OUTPUT);
+}
+
+float read_ultrasounic()
+{
+    digitalWrite(Trig, LOW); 
+    delayMicroseconds(2); 
+    digitalWrite(Trig, HIGH); 
+    delayMicroseconds(10); 
+    digitalWrite(Trig, LOW); // Spočítá vzdálenost 
+    float distance = pulseIn(Echo, HIGH); 
+    distance = distance*0.017315f; // odešle informace na sérivý port 
+    Serial.print(distance); 
+    Serial.print("cm\n");
+    delay(200);
+    return distance;
 }
